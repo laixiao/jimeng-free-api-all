@@ -78,6 +78,8 @@ function resolveResolution(
 
 // 模型特定的版本配置
 const MODEL_DRAFT_VERSIONS: { [key: string]: string } = {
+  "jimeng-5.0-preview": "3.3.9",
+  "jimeng-4.6": "3.3.9",
   "jimeng-4.5": "3.3.4",
   "jimeng-4.1": "3.3.4",
   "jimeng-4.0": "3.3.4",
@@ -101,6 +103,8 @@ function getDraftVersion(model: string): string {
   }
 }
 const MODEL_MAP = {
+  "jimeng-5.0-preview": "high_aes_general_v50",
+  "jimeng-4.6": "high_aes_general_v42",
   "jimeng-4.5": "high_aes_general_v40l",
   "jimeng-4.1": "high_aes_general_v41",
   "jimeng-4.0": "high_aes_general_v40",
@@ -1196,7 +1200,7 @@ export async function generateImages(
     await receiveCredit(refreshToken);
 
   // 检测是否为多图生成请求
-  const isMultiImageRequest = (/jimeng-4\.[0-9]+/.test(_model)) && (
+  const isMultiImageRequest = (/jimeng-[45]\.[0-9]/.test(_model)) && (
     prompt.includes("连续") ||
     prompt.includes("绘本") ||
     prompt.includes("故事") ||

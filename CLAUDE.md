@@ -1,144 +1,257 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/claude-code) when working with code in this repository.
+本文件为 Claude Code (claude.ai/claude-code) 在此代码仓库中工作时提供指导。
 
-## Project Overview
+## 项目概述
 
-Jimeng AI Free API Server - A reverse-engineered API server that provides OpenAI-compatible endpoints for Jimeng AI (即梦 AI) image and video generation capabilities.
+即梦 AI 免费 API 服务 - 逆向工程的 API 服务器，提供 OpenAI 兼容接口，封装即梦 AI 的图像和视频生成能力。
 
-**Key Features:**
-- Text-to-Image generation (multiple models: jimeng-4.5, jimeng-4.1, etc.)
-- Image-to-Image composition
-- Video generation (jimeng-video-3.5-pro, jimeng-video-3.0, etc.)
-- Seedance 2.0 multi-image intelligent video generation
-- OpenAI API compatible endpoints
+**版本：** v0.8.0
 
-## Build and Development Commands
+**核心功能：**
+- 文生图：支持 jimeng-5.0-preview、jimeng-4.6、jimeng-4.5 等多款模型，最高 4K 分辨率
+- 图生图：多图合成，支持 1-10 张输入图片
+- 视频生成：jimeng-video-3.5-pro 等模型，支持首帧/尾帧控制
+- Seedance 2.0：多图智能视频生成，支持 @1、@2 占位符引用图片
+- OpenAI 兼容：完全兼容 OpenAI API 格式，无缝对接现有客户端
+- 多账号支持：支持多个 sessionid 轮询使用
+
+## 构建和开发命令
 
 ```bash
-# Install dependencies
+# 安装依赖
 npm install
 
-# Development mode with hot reload
+# 开发模式（热重载）
 npm run dev
 
-# Build for production
+# 生产环境构建
 npm run build
 
-# Start production server
+# 启动生产服务
 npm start
 ```
 
-## Docker Commands
+## Docker 命令
 
 ```bash
-# Build Docker image
+# 构建 Docker 镜像
 docker build -t jimeng-free-api-all:latest .
 
-# Run container
+# 运行容器
 docker run -it -d --init --name jimeng-free-api-all -p 8000:8000 -e TZ=Asia/Shanghai jimeng-free-api-all:latest
 
-# Using pre-built image from Docker Hub
+# 使用 Docker Hub 预构建镜像
 docker pull wwwzhouhui569/jimeng-free-api-all:latest
 docker run -it -d --init --name jimeng-free-api-all -p 8000:8000 -e TZ=Asia/Shanghai wwwzhouhui569/jimeng-free-api-all:latest
 ```
 
-## Project Architecture
+## 项目架构
 
 ```
 src/
-├── index.ts                    # Application entry point
-├── daemon.ts                   # Daemon process management
+├── index.ts                    # 应用入口
+├── daemon.ts                   # 守护进程管理
 ├── api/
-│   ├── controllers/            # Business logic controllers
-│   │   ├── core.ts            # Core utilities (token handling, etc.)
-│   │   ├── images.ts          # Image generation logic
-│   │   ├── videos.ts          # Video generation logic (including Seedance 2.0)
-│   │   └── chat.ts            # Chat completion logic
-│   ├── routes/                 # API route definitions
-│   │   ├── index.ts           # Route aggregator
-│   │   ├── images.ts          # /v1/images/* endpoints
-│   │   ├── videos.ts          # /v1/videos/* endpoints
-│   │   ├── chat.ts            # /v1/chat/* endpoints
-│   │   ├── models.ts          # /v1/models endpoint
-│   │   └── ...
-│   └── consts/                 # API constants and exceptions
+│   ├── controllers/            # 业务逻辑控制器
+│   │   ├── core.ts            # 核心工具（Token处理、积分管理、请求封装）
+│   │   ├── images.ts          # 图像生成逻辑（文生图、图生图）
+│   │   ├── videos.ts          # 视频生成逻辑（含 Seedance 2.0）
+│   │   └── chat.ts            # 对话补全逻辑
+│   ├── routes/                 # API 路由定义
+│   │   ├── index.ts           # 路由聚合器
+│   │   ├── images.ts          # /v1/images/* 端点
+│   │   ├── videos.ts          # /v1/videos/* 端点
+│   │   ├── video.ts           # /v1/video/* 端点（videos 的包装路由）
+│   │   ├── chat.ts            # /v1/chat/* 端点
+│   │   ├── models.ts          # /v1/models 端点
+│   │   ├── ping.ts            # /ping 健康检查端点
+│   │   └── token.ts           # /token/* Token管理端点
+│   └── consts/
+│       └── exceptions.ts       # API 异常定义
 └── lib/
-    ├── server.ts              # Koa server setup with middleware
-    ├── config.ts              # Configuration management
-    ├── logger.ts              # Logging utilities
-    ├── util.ts                # Helper utilities
-    ├── request/               # Request handling classes
-    ├── response/              # Response handling classes
-    ├── exceptions/            # Exception classes
-    └── configs/               # Configuration schemas
+    ├── server.ts              # Koa 服务器配置（含中间件栈）
+    ├── config.ts              # 配置管理
+    ├── logger.ts              # 日志工具
+    ├── util.ts                # 辅助工具函数
+    ├── environment.ts         # 环境变量
+    ├── initialize.ts          # 初始化逻辑
+    ├── http-status-codes.ts   # HTTP 状态码
+    ├── request/
+    │   └── Request.ts         # 请求解析与验证（含文件上传规范化）
+    ├── response/
+    │   ├── Response.ts        # 响应包装器
+    │   ├── Body.ts            # 响应体
+    │   └── FailureBody.ts     # 错误响应体
+    ├── exceptions/
+    │   ├── Exception.ts       # 基础异常类
+    │   └── APIException.ts    # API 异常类
+    ├── interfaces/
+    │   └── ICompletionMessage.ts  # 对话消息接口
+    └── configs/               # 配置模式
+        ├── model-config.ts    # 模型配置（模型参数、分辨率映射等）
+        ├── service-config.ts  # 服务配置
+        └── system-config.ts   # 系统配置
 ```
 
-## API Endpoints
+## API 端点
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/chat/completions` | POST | OpenAI-compatible chat completions (for image/video generation) |
-| `/v1/images/generations` | POST | Text-to-image generation |
-| `/v1/images/compositions` | POST | Image-to-image composition |
-| `/v1/videos/generations` | POST | Video generation (including Seedance 2.0) |
-| `/v1/models` | GET | List available models |
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/v1/chat/completions` | POST | OpenAI 兼容的对话接口（用于图像/视频生成） |
+| `/v1/images/generations` | POST | 文生图接口 |
+| `/v1/images/compositions` | POST | 图生图接口（支持文件上传） |
+| `/v1/videos/generations` | POST | 视频生成接口（含 Seedance 2.0） |
+| `/v1/video/generations` | POST | 视频生成接口（别名路由） |
+| `/v1/models` | GET | 获取可用模型列表 |
+| `/token/check` | POST | 检查 Token 有效性 |
+| `/token/points` | POST | 查询账户积分 |
+| `/ping` | GET | 健康检查端点 |
 
-## Key Technical Details
+## 关键技术细节
 
-### Authentication
-- Uses `sessionid` cookie from Jimeng website as Bearer token
-- Multi-account support via comma-separated sessionids: `Authorization: Bearer sessionid1,sessionid2`
+### 认证方式
+- 使用即梦网站的 `sessionid` Cookie 作为 Bearer Token
+- 多账号支持：逗号分隔多个 sessionid：`Authorization: Bearer sessionid1,sessionid2`
+- 每次请求随机选择一个 sessionid 使用
 
-### Model Mappings
-- **Image Models**: jimeng-4.5, jimeng-4.1, jimeng-4.0, jimeng-3.x, jimeng-2.x, jimeng-1.4, jimeng-xl-pro
-- **Video Models**: jimeng-video-3.5-pro, jimeng-video-3.0, jimeng-video-3.0-pro, jimeng-video-2.0, jimeng-video-2.0-pro
-- **Seedance Models**: seedance-2.0, seedance-2.0-pro (multi-image video generation)
+### 模型映射
 
-### File Upload
-- Supports multipart/form-data for file uploads
-- koa-body configured with 100MB file size limit
-- Files field can be object or array format (normalized in Request.ts)
+#### 图像模型
+| 用户模型名 | 内部模型名 | Draft 版本 | 说明 |
+|-----------|-----------|-----------|------|
+| `jimeng-5.0-preview` | `high_aes_general_v50` | 3.3.9 | 5.0 预览版，最新模型 |
+| `jimeng-4.6` | `high_aes_general_v42` | 3.3.9 | 推荐使用 |
+| `jimeng-4.5` | `high_aes_general_v40l` | 3.3.4 | 高质量模型 |
+| `jimeng-4.1` | `high_aes_general_v41` | 3.3.4 | 高质量模型 |
+| `jimeng-4.0` | `high_aes_general_v40` | 3.3.4 | 稳定版本 |
+| `jimeng-3.1` | `high_aes_general_v30l_art_fangzhou` | - | 艺术风格 |
+| `jimeng-3.0` | `high_aes_general_v30l` | - | 通用模型 |
+| `jimeng-2.1` | - | - | 旧版模型 |
+| `jimeng-2.0-pro` | - | - | 旧版专业模型 |
+| `jimeng-2.0` | - | - | 旧版模型 |
+| `jimeng-1.4` | - | - | 早期模型 |
+| `jimeng-xl-pro` | - | - | XL 专业模型 |
 
-### Seedance 2.0 Specifics
-- Uses `unified_edit_input` structure with `material_list` and `meta_list`
-- Internal model: `dreamina_seedance_40_pro`
-- Draft version: 3.3.9
-- Supports prompt placeholders: @1, @2, @图1, @image1 to reference uploaded images
+#### 视频模型
+| 用户模型名 | 内部模型名 | 说明 |
+|-----------|-----------|------|
+| `jimeng-video-3.5-pro` | `dreamina_ic_generate_video_model_vgfm_3.5_pro` | 最新视频模型 |
+| `jimeng-video-3.0` | - | 视频生成 3.0 |
+| `jimeng-video-3.0-pro` | - | 视频生成 3.0 专业版 |
+| `jimeng-video-2.0` | - | 视频生成 2.0 |
+| `jimeng-video-2.0-pro` | - | 视频生成 2.0 专业版 |
+| `seedance-2.0` | `dreamina_seedance_40_pro` | 多图智能视频生成 |
+| `seedance-2.0-pro` | `dreamina_seedance_40_pro` | 多图智能视频生成专业版 |
 
-## Development Guidelines
+### 请求参数
 
-1. **TypeScript**: Project uses TypeScript with ESM modules
-2. **Path Aliases**: Uses `@/` alias pointing to `src/` directory
-3. **Logging**: Use the logger from `@/lib/logger.ts` for consistent output
-4. **Configuration**: Environment configs in `configs/` directory, loaded via `@/lib/config.ts`
-5. **API Compatibility**: Maintain OpenAI API compatibility for client integration
+#### 文生图参数 (`/v1/images/generations`)
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| model | string | 否 | jimeng-4.5 | 模型名称 |
+| prompt | string | 是 | - | 提示词，jimeng-4.x/5.x 支持多图生成 |
+| negative_prompt | string | 否 | "" | 反向提示词 |
+| ratio | string | 否 | 1:1 | 宽高比：1:1, 4:3, 3:4, 16:9, 9:16, 3:2, 2:3, 21:9 |
+| resolution | string | 否 | 2k | 分辨率：1k, 2k, 4k |
+| sample_strength | float | 否 | 0.5 | 精细度 0.0-1.0 |
+| response_format | string | 否 | url | url 或 b64_json |
 
-## Testing API Calls
+#### 图生图参数 (`/v1/images/compositions`)
+- 与文生图相同的参数
+- 额外支持 multipart/form-data 文件上传
+- `images` 字段：图片 URL 数组，1-10 张
+
+#### 视频生成参数 (`/v1/videos/generations`)
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| model | string | 否 | jimeng-video-3.0 | 模型名称 |
+| prompt | string | 否 | - | 视频描述（图生视频时可选） |
+| ratio | string | 否 | 1:1 | 宽高比：1:1, 4:3, 3:4, 16:9, 9:16 |
+| resolution | string | 否 | 720p | 分辨率：480p, 720p, 1080p |
+| duration | number | 否 | 5 | 时长：4（Seedance）、5 或 10 秒 |
+| file_paths / filePaths | array | 否 | [] | 首帧/尾帧图片 URL |
+| files | file[] | 否 | - | 上传的图片（multipart） |
+
+#### Seedance 2.0 专用参数
+- 使用 `unified_edit_input` 结构，包含 `material_list` 和 `meta_list`
+- 内部模型：`dreamina_seedance_40_pro`
+- Draft 版本：3.3.9
+- 提示词占位符：`@1`、`@2`、`@图1`、`@图2`、`@image1`、`@image2` 引用上传的图片
+
+### 文件上传
+- 支持 multipart/form-data 文件上传
+- koa-body 配置最大文件大小 100MB
+- files 字段可以是对象或数组格式（在 Request.ts 中自动规范化）
+- 支持 formLimit/jsonLimit/textLimit：100mb
+
+### 分辨率支持
+
+#### 图片分辨率
+| 分辨率 | 1:1 | 4:3 | 3:4 | 16:9 | 9:16 | 3:2 | 2:3 | 21:9 |
+|--------|-----|-----|-----|------|------|-----|-----|------|
+| 1k | 1024×1024 | 768×1024 | 1024×768 | 1024×576 | 576×1024 | 1024×682 | 682×1024 | 1195×512 |
+| 2k | 2048×2048 | 2304×1728 | 1728×2304 | 2560×1440 | 1440×2560 | 2496×1664 | 1664×2496 | 3024×1296 |
+| 4k | 4096×4096 | 4608×3456 | 3456×4608 | 5120×2880 | 2880×5120 | 4992×3328 | 3328×4992 | 6048×2592 |
+
+#### 视频分辨率
+| 分辨率 | 1:1 | 4:3 | 3:4 | 16:9 | 9:16 |
+|--------|-----|-----|-----|------|------|
+| 480p | 480×480 | 640×480 | 480×640 | 854×480 | 480×854 |
+| 720p | 720×720 | 960×720 | 720×960 | 1280×720 | 720×1280 |
+| 1080p | 1080×1080 | 1440×1080 | 1080×1440 | 1920×1080 | 1080×1920 |
+
+### 服务器中间件栈
+1. **CORS 跨域支持**：`koa2-cors()`
+2. **Range 请求**：`koaRange`（支持分段内容传输）
+3. **自定义异常处理器**：捕获错误并返回 FailureBody 响应
+4. **自定义 JSON 解析器**：处理 POST/PUT/PATCH 请求的 JSON（清理问题 Unicode 字符，跳过 multipart 请求）
+5. **Body 解析器**：`koa-body`（multipart: true，maxFileSize: 100MB）
+
+## 开发规范
+
+1. **TypeScript**：项目使用 TypeScript + ESM 模块
+2. **路径别名**：使用 `@/` 别名指向 `src/` 目录
+3. **日志**：使用 `@/lib/logger.ts` 中的 logger 保持输出一致
+4. **配置**：环境配置在 `configs/` 目录，通过 `@/lib/config.ts` 加载
+5. **API 兼容性**：维护 OpenAI API 兼容性，确保客户端集成正常
+6. **Node.js 版本**：≥16.0.0
+
+## 测试 API 调用
 
 ```bash
-# Text-to-image
+# 文生图（使用最新模型）
 curl -X POST http://localhost:8000/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_sessionid" \
-  -d '{"model": "jimeng-4.5", "prompt": "beautiful sunset", "ratio": "16:9", "resolution": "2k"}'
+  -d '{"model": "jimeng-5.0-preview", "prompt": "美丽的日落风景", "ratio": "16:9", "resolution": "2k"}'
 
-# Video generation
+# 视频生成
 curl -X POST http://localhost:8000/v1/videos/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_sessionid" \
-  -d '{"model": "jimeng-video-3.5-pro", "prompt": "cat playing", "ratio": "16:9", "resolution": "720p"}'
+  -d '{"model": "jimeng-video-3.5-pro", "prompt": "一只小猫在草地上玩耍", "ratio": "16:9", "resolution": "720p"}'
 
-# Seedance 2.0 multi-image video (file upload)
+# Seedance 2.0 多图视频（文件上传）
 curl -X POST http://localhost:8000/v1/videos/generations \
   -H "Authorization: Bearer your_sessionid" \
   -F "model=seedance-2.0" \
-  -F "prompt=@1 and @2 start dancing" \
+  -F "prompt=@1 和 @2 两人开始跳舞" \
+  -F "ratio=4:3" \
+  -F "duration=4" \
   -F "files=@/path/to/image1.jpg" \
   -F "files=@/path/to/image2.jpg"
+
+# 健康检查
+curl http://localhost:8000/ping
+
+# Token 检查
+curl -X POST http://localhost:8000/token/check \
+  -H "Content-Type: application/json" \
+  -d '{"token": "your_sessionid"}'
 ```
 
-## Configuration
+## 配置
 
-Default port: 8000
-Configuration files in `configs/` directory with YAML format.
+默认端口：8000
+配置文件在 `configs/` 目录，使用 YAML 格式。

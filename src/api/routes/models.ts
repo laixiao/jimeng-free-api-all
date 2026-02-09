@@ -14,10 +14,22 @@ export default {
                         "owned_by": "jimeng-free-api"
                     },
                     {
+                        "id": "jimeng-5.0-preview",
+                        "object": "model",
+                        "owned_by": "jimeng-free-api",
+                        "description": "即梦AI图像生成模型 5.0 Preview 版本（最新）"
+                    },
+                    {
+                        "id": "jimeng-4.6",
+                        "object": "model",
+                        "owned_by": "jimeng-free-api",
+                        "description": "即梦AI图像生成模型 4.6 版本（最新）"
+                    },
+                    {
                         "id": "jimeng-4.5",
                         "object": "model",
                         "owned_by": "jimeng-free-api",
-                        "description": "即梦AI图像生成模型 4.5 版本（最新）"
+                        "description": "即梦AI图像生成模型 4.5 版本"
                     },
                     {
                         "id": "jimeng-4.1",
