@@ -3,7 +3,7 @@
 即梦 AI 免费 API 服务 - 支持文生图、图生图、视频生成的 OpenAI 兼容接口
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-v0.8.2-green.svg)
+![Version](https://img.shields.io/badge/version-v0.8.3-green.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-blue.svg)
 
@@ -444,6 +444,15 @@ Authorization: Bearer sessionid1,sessionid2,sessionid3
 </details>
 
 ## 更新日志
+
+### v0.8.3 (2026-02-14) - 修复 Seedance 2.0-fast 积分扣减失败
+
+- 🐛 **修复 fast 版 benefit_type 错误**：`dreamina_video_seedance_20_fast` → `dreamina_seedance_20_fast`（无 `video_` 前缀），解决 `credit prededuct failed` 错误
+- 🔧 **升级 Seedance Draft 版本**：`3.3.8` → `3.3.9`，与即梦官网保持一致
+- 🔧 **升级客户端版本号**：`VERSION_CODE` 从 `5.8.0` → `8.4.0`，`Chrome UA` 更新至 132
+- 🔧 **补全请求头**：新增 `App-Sdk-Version`、`Lan`、`Loc` 头部，匹配即梦官网请求
+- 🔧 **修正 region 参数**：`CN` → `cn`（小写），与即梦官网一致
+- 🔧 **补全 image_info.aigc_image 字段**：Seedance material_list 中的 image_info 新增 `aigc_image` 对象
 
 ### v0.8.2 (2026-02-13) - 新增 Seedance 2.0-fast 快速视频生成模型
 

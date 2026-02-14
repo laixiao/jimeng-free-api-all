@@ -181,8 +181,8 @@ src/
 - 上游标准模型名：`jimeng-video-seedance-2.0`（兼容 `seedance-2.0`、`seedance-2.0-pro`）
 - 快速版模型名：`jimeng-video-seedance-2.0-fast`（兼容 `seedance-2.0-fast`）
 - 内部模型（标准版）：`dreamina_seedance_40_pro`，benefit_type：`dreamina_video_seedance_20_pro`
-- 内部模型（快速版）：`dreamina_seedance_40`，benefit_type：`dreamina_video_seedance_20_fast`
-- Draft 版本：3.3.8
+- 内部模型（快速版）：`dreamina_seedance_40`，benefit_type：`dreamina_seedance_20_fast`（注意：无 `video_` 前缀）
+- Draft 版本：3.3.9
 - 时长范围：4-15 秒（连续范围，与上游 iptag/jimeng-api 一致）
 - 提示词占位符：`@1`、`@2`、`@图1`、`@图2`、`@image1`、`@image2` 引用上传的图片
 

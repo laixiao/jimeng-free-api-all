@@ -15,7 +15,7 @@ const MODEL_NAME = "jimeng";
 // 默认的AgentID
 const DEFAULT_ASSISTANT_ID = 513695;
 // 版本号
-const VERSION_CODE = "5.8.0";
+const VERSION_CODE = "8.4.0";
 // 平台代码
 const PLATFORM_CODE = "7";
 // 设备ID
@@ -33,23 +33,26 @@ const FAKE_HEADERS = {
   Accept: "application/json, text/plain, */*",
   "Accept-Encoding": "gzip, deflate, br, zstd",
   "Accept-language": "zh-CN,zh;q=0.9",
+  "App-Sdk-Version": "48.0.0",
   "Cache-control": "no-cache",
   Appid: DEFAULT_ASSISTANT_ID,
   Appvr: VERSION_CODE,
+  Lan: "zh-Hans",
+  Loc: "cn",
   Origin: "https://jimeng.jianying.com",
   Pragma: "no-cache",
   Priority: "u=1, i",
   Referer: "https://jimeng.jianying.com",
   Pf: PLATFORM_CODE,
   "Sec-Ch-Ua":
-    '"Google Chrome";v="142", "Chromium";v="142", "Not_A Brand";v="99"',
+    '"Google Chrome";v="132", "Chromium";v="132", "Not_A Brand";v="8"',
   "Sec-Ch-Ua-Mobile": "?0",
   "Sec-Ch-Ua-Platform": '"Windows"',
   "Sec-Fetch-Dest": "empty",
   "Sec-Fetch-Mode": "cors",
   "Sec-Fetch-Site": "same-origin",
   "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36",
 };
 // 文件最大大小
 const FILE_MAX_SIZE = 100 * 1024 * 1024;
@@ -153,7 +156,7 @@ export async function request(
   const requestParams = {
     aid: DEFAULT_ASSISTANT_ID,
     device_platform: "web",
-    region: "CN",
+    region: "cn",
     webId: WEB_ID,
     da_version: "3.3.2",
     web_component_open_flag: 1,

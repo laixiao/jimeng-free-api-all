@@ -19,12 +19,12 @@ const MODEL_DRAFT_VERSIONS: { [key: string]: string } = {
   "jimeng-video-2.0": "3.2.8",
   "jimeng-video-2.0-pro": "3.2.8",
   // Seedance 模型（与上游 iptag/jimeng-api 保持一致）
-  "jimeng-video-seedance-2.0": "3.3.8",
-  "seedance-2.0": "3.3.8",
-  "seedance-2.0-pro": "3.3.8",
+  "jimeng-video-seedance-2.0": "3.3.9",
+  "seedance-2.0": "3.3.9",
+  "seedance-2.0-pro": "3.3.9",
   // Seedance 2.0-fast 模型（v1.9.3 新增）
-  "jimeng-video-seedance-2.0-fast": "3.3.8",
-  "seedance-2.0-fast": "3.3.8",
+  "jimeng-video-seedance-2.0-fast": "3.3.9",
+  "seedance-2.0-fast": "3.3.9",
 };
 
 const MODEL_MAP = {
@@ -47,9 +47,9 @@ const SEEDANCE_BENEFIT_TYPE_MAP: { [key: string]: string } = {
   "jimeng-video-seedance-2.0": "dreamina_video_seedance_20_pro",
   "seedance-2.0": "dreamina_video_seedance_20_pro",
   "seedance-2.0-pro": "dreamina_video_seedance_20_pro",
-  // Seedance 2.0-fast（v1.9.3 新增）
-  "jimeng-video-seedance-2.0-fast": "dreamina_video_seedance_20_fast",
-  "seedance-2.0-fast": "dreamina_video_seedance_20_fast",
+  // Seedance 2.0-fast（v1.9.3 新增，注意：无 "video_" 前缀）
+  "jimeng-video-seedance-2.0-fast": "dreamina_seedance_20_fast",
+  "seedance-2.0-fast": "dreamina_seedance_20_fast",
 };
 
 // 判断是否为 Seedance 模型
@@ -1274,6 +1274,10 @@ export async function generateSeedanceVideo(
       platform_type: 1,
       name: "",
       image_uri: img.uri,
+      aigc_image: {
+        type: "",
+        id: util.uuid(),
+      },
       width: img.width,
       height: img.height,
       format: "",
