@@ -148,8 +148,8 @@ Authorization: Bearer sessionid1,sessionid2,sessionid3
 | 端点 | 方法 | 说明 |
 |------|------|------|
 | `/v1/chat/completions` | POST | OpenAI 兼容的对话接口 |
-| `/v1/images/generations` | POST | 文生图接口 |
-| `/v1/images/compositions` | POST | 图生图接口 |
+| `/v1/images/generations` | POST | 文生图/图生图接口（支持 images 可选参数） |
+| `/v1/images/compositions` | POST | 图生图接口（向后兼容） |
 | `/v1/videos/generations` | POST | 视频生成接口 |
 | `/v1/models` | GET | 获取模型列表 |
 
@@ -166,6 +166,25 @@ curl -X POST http://localhost:8000/v1/images/generations \
     "prompt": "美丽的日落风景，湖边的小屋",
     "ratio": "16:9",
     "resolution": "2k"
+  }'
+```
+
+**图生图示例（通过 images 参数）：**
+
+```bash
+curl -X POST http://localhost:8000/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_sessionid" \
+  -d '{
+    "model": "jimeng-4.5",
+    "prompt": "将两张图融合成梦幻风格",
+    "images": [
+      "https://example.com/img1.jpg",
+      "https://example.com/img2.jpg"
+    ],
+    "ratio": "1:1",
+    "resolution": "2k",
+    "sample_strength": 0.5
   }'
 ```
 
@@ -313,23 +332,34 @@ jimeng-free-api-all/
 
 ## API 详细文档
 
-### 文生图接口
+### 图像生成接口
 
 **POST /v1/images/generations**
+
+统一接口，支持文生图和图生图两种模式：
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | model | string | 否 | jimeng-4.5 | 模型名称 |
 | prompt | string | 是 | - | 提示词，支持多图生成 |
+| images | array | 否 | - | 图片URL数组（1-10张），提供则走图生图模式，不提供则走文生图模式 |
 | negative_prompt | string | 否 | "" | 反向提示词 |
 | ratio | string | 否 | 1:1 | 宽高比 |
 | resolution | string | 否 | 2k | 分辨率：1k, 2k, 4k |
 | sample_strength | number | 否 | 0.5 | 精细度 0-1 |
 | response_format | string | 否 | url | url 或 b64_json |
 
-### 图生图接口
+**说明：**
+- 当 `images` 参数为空或不提供时，接口执行文生图功能
+- 当 `images` 参数提供（1-10张图片）时，接口执行图生图功能
+- 支持 `application/json`（images 为 URL 数组）和 `multipart/form-data`（通过 images 字段上传文件）两种请求格式
+- 图生图模式下，响应会额外包含 `input_images` 和 `composition_type` 字段
+
+### 图生图接口（向后兼容）
 
 **POST /v1/images/compositions**
+
+保留此接口以确保向后兼容，功能与 `/v1/images/generations` 提供 `images` 参数时相同。
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
