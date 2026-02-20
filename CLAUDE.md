@@ -103,8 +103,8 @@ src/
 | 端点 | 方法 | 说明 |
 |------|------|------|
 | `/v1/chat/completions` | POST | OpenAI 兼容的对话接口（用于图像/视频生成） |
-| `/v1/images/generations` | POST | 文生图接口 |
-| `/v1/images/compositions` | POST | 图生图接口（支持文件上传） |
+| `/v1/images/generations` | POST | 文生图/图生图接口（支持 images 可选参数） |
+| `/v1/images/compositions` | POST | 图生图接口（支持文件上传，向后兼容） |
 | `/v1/videos/generations` | POST | 视频生成接口（含 Seedance 2.0 / 2.0-fast） |
 | `/v1/video/generations` | POST | 视频生成接口（别名路由） |
 | `/v1/models` | GET | 获取可用模型列表 |
@@ -153,21 +153,28 @@ src/
 
 ### 请求参数
 
-#### 文生图参数 (`/v1/images/generations`)
+#### 图像生成参数 (`/v1/images/generations`)
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | model | string | 否 | jimeng-4.5 | 模型名称 |
 | prompt | string | 是 | - | 提示词，jimeng-4.x/5.x 支持多图生成 |
+| images | array | 否 | - | 图片URL数组（1-10张），提供则走图生图模式，不提供则走文生图模式 |
 | negative_prompt | string | 否 | "" | 反向提示词 |
 | ratio | string | 否 | 1:1 | 宽高比：1:1, 4:3, 3:4, 16:9, 9:16, 3:2, 2:3, 21:9 |
 | resolution | string | 否 | 2k | 分辨率：1k, 2k, 4k |
 | sample_strength | float | 否 | 0.5 | 精细度 0.0-1.0 |
 | response_format | string | 否 | url | url 或 b64_json |
 
-#### 图生图参数 (`/v1/images/compositions`)
-- 与文生图相同的参数
+**说明：**
+- 当 `images` 参数为空或不提供时，接口执行文生图功能
+- 当 `images` 参数提供（1-10张图片）时，接口执行图生图功能
+- 支持 `application/json`（images 为 URL 数组）和 `multipart/form-data`（通过 images 字段上传文件）两种请求格式
+- 图生图模式下，响应会额外包含 `input_images` 和 `composition_type` 字段
+
+#### 图生图参数 (`/v1/images/compositions`) - 向后兼容
+- 与 `/v1/images/generations` 相同的参数
+- `images` 字段为必填（1-10张图片）
 - 额外支持 multipart/form-data 文件上传
-- `images` 字段：图片 URL 数组，1-10 张
 
 #### 视频生成参数 (`/v1/videos/generations`)
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
@@ -244,6 +251,21 @@ curl -X POST http://localhost:8000/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_sessionid" \
   -d '{"model": "jimeng-5.0-preview", "prompt": "美丽的日落风景", "ratio": "16:9", "resolution": "2k"}'
+
+# 图生图（通过 images 参数）
+curl -X POST http://localhost:8000/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_sessionid" \
+  -d '{"model": "jimeng-4.5", "prompt": "将两张图融合成梦幻风格", "images": ["https://example.com/img1.jpg", "https://example.com/img2.jpg"], "ratio": "1:1", "resolution": "2k", "sample_strength": 0.5}'
+
+# 图生图（multipart 文件上传）
+curl -X POST http://localhost:8000/v1/images/generations \
+  -H "Authorization: Bearer your_sessionid" \
+  -F "model=jimeng-4.5" \
+  -F "prompt=将图片转换为油画风格" \
+  -F "images=@/path/to/image1.jpg" \
+  -F "ratio=1:1" \
+  -F "resolution=2k"
 
 # 视频生成
 curl -X POST http://localhost:8000/v1/videos/generations \
