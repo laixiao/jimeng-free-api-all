@@ -78,7 +78,7 @@ function resolveResolution(
 
 // 模型特定的版本配置
 const MODEL_DRAFT_VERSIONS: { [key: string]: string } = {
-  "jimeng-5.0-preview": "3.3.9",
+  "jimeng-5.0": "3.3.9",
   "jimeng-4.6": "3.3.9",
   "jimeng-4.5": "3.3.4",
   "jimeng-4.1": "3.3.4",
@@ -103,7 +103,7 @@ function getDraftVersion(model: string): string {
   }
 }
 const MODEL_MAP = {
-  "jimeng-5.0-preview": "high_aes_general_v50",
+  "jimeng-5.0": "high_aes_general_v50",
   "jimeng-4.6": "high_aes_general_v42",
   "jimeng-4.5": "high_aes_general_v40l",
   "jimeng-4.1": "high_aes_general_v41",

@@ -3,7 +3,7 @@
 即梦 AI 免费 API 服务 - 支持文生图、图生图、视频生成的 OpenAI 兼容接口
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-v0.8.5-green.svg)
+![Version](https://img.shields.io/badge/version-v0.8.6-green.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-blue.svg)
 
@@ -13,11 +13,11 @@
 
 ### 项目概述
 
-Jimeng AI Free API 是一个逆向工程的 API 服务器，将即梦 AI（Jimeng AI）的图像和视频生成能力封装为 OpenAI 兼容的 API 接口。支持最新的 **jimeng-5.0-preview**、**jimeng-4.6** 文生图模型、**Seedance 2.0 多模态智能视频生成**（模型名 `jimeng-video-seedance-2.0`，支持图片/视频/音频混合上传）及 **Seedance 2.0-fast 快速版**（模型名 `jimeng-video-seedance-2.0-fast`），零配置部署，多路 token 支持。
+Jimeng AI Free API 是一个逆向工程的 API 服务器，将即梦 AI（Jimeng AI）的图像和视频生成能力封装为 OpenAI 兼容的 API 接口。支持最新的 **jimeng-5.0**、**jimeng-4.6** 文生图模型、**Seedance 2.0 多模态智能视频生成**（模型名 `jimeng-video-seedance-2.0`，支持图片/视频/音频混合上传）及 **Seedance 2.0-fast 快速版**（模型名 `jimeng-video-seedance-2.0-fast`），零配置部署，多路 token 支持。
 
 ### 核心功能
 
-- 🖼️ **文生图**：支持 jimeng-5.0-preview、jimeng-4.6、jimeng-4.5 等多款模型，最高 4K 分辨率
+- 🖼️ **文生图**：支持 jimeng-5.0、jimeng-4.6、jimeng-4.5 等多款模型，最高 4K 分辨率
 - 🎭 **图生图**：多图合成，支持 1-10 张输入图片
 - 🎬 **视频生成**：jimeng-video-3.5-pro 等模型，支持首帧/尾帧控制
 - 🌊 **Seedance 2.0 / 2.0-fast**：多模态智能视频生成，支持图片/视频/音频混合上传，@1、@2 占位符引用素材，fast 版本生成更快
@@ -38,8 +38,8 @@ Jimeng AI Free API 是一个逆向工程的 API 服务器，将即梦 AI（Jimen
 
 | 功能名称 | 功能说明 | 模型 | 状态 |
 |---------|---------|------|------|
-| 文生图 | 根据文本描述生成图片 | jimeng-5.0-preview, jimeng-4.6, jimeng-4.5, jimeng-4.1 等 | ✅ 可用 |
-| 图生图 | 多图合成生成新图片 | jimeng-5.0-preview, jimeng-4.6, jimeng-4.5 等 | ✅ 可用 |
+| 文生图 | 根据文本描述生成图片 | jimeng-5.0, jimeng-4.6, jimeng-4.5, jimeng-4.1 等 | ✅ 可用 |
+| 图生图 | 多图合成生成新图片 | jimeng-5.0, jimeng-4.6, jimeng-4.5 等 | ✅ 可用 |
 | 文生视频 | 根据文本描述生成视频 | jimeng-video-3.5-pro 等 | ✅ 可用 |
 | 图生视频 | 使用首帧/尾帧图片生成视频 | jimeng-video-3.0 等 | ✅ 可用 |
 | 多图智能视频 | Seedance 2.0 多模态混合生成 | jimeng-video-seedance-2.0, seedance-2.0 | ✅ 可用 |
@@ -284,7 +284,7 @@ jimeng-free-api-all/
 
 | 用户模型名 | 内部模型名 | 说明 |
 |-----------|-----------|------|
-| `jimeng-5.0-preview` | `high_aes_general_v50` | 5.0 预览版，最新模型 |
+| `jimeng-5.0` | `high_aes_general_v50` | 5.0 正式版，最新模型 |
 | `jimeng-4.6` | `high_aes_general_v42` | 最新模型，推荐使用 |
 | `jimeng-4.5` | `high_aes_general_v40l` | 高质量模型 |
 | `jimeng-4.1` | `high_aes_general_v41` | 高质量模型 |
@@ -514,6 +514,12 @@ Authorization: Bearer sessionid1,sessionid2,sessionid3
 
 ## 更新日志
 
+### v0.8.6 (2026-02-20) - jimeng-5.0 正式版模型更新
+
+- 🔄 **模型更名 `jimeng-5.0-preview` → `jimeng-5.0`**：即梦平台已将 5.0 预览版升级为正式版，移除 `-preview` 后缀
+- 🔧 **更新模型配置**：同步更新 `MODEL_MAP`、`MODEL_DRAFT_VERSIONS`、`MODEL_CONFIGS` 中的模型名映射
+- 🔧 **更新模型列表接口**：`/v1/models` 返回的模型 ID 和描述信息同步更新
+
 ### v0.8.5 (2026-02-20) - Seedance 多模态素材支持（图片/视频/音频混合上传）
 
 - ✨ **Seedance 多模态素材上传**：支持图片、视频、音频混合上传，通过 MIME 类型和文件扩展名自动检测素材类型
@@ -555,9 +561,9 @@ Authorization: Bearer sessionid1,sessionid2,sessionid3
 - ⏱️ **扩展 Seedance 时长支持**：从固定 4 秒扩展为 4-15 秒连续范围
 - 🔧 **更新 Draft 版本**：Seedance 模型 Draft 版本从 `3.3.9` 调整为 `3.3.8`
 
-### v0.8.0 (2026-02-09) - 新增 jimeng-5.0-preview 和 jimeng-4.6 图像生成模型
+### v0.8.0 (2026-02-09) - 新增 jimeng-5.0-preview（现已更名为 jimeng-5.0）和 jimeng-4.6 图像生成模型
 
-- ✨ **新增 jimeng-5.0-preview 模型**：即梦 AI 最新 5.0 预览版图像生成模型（内部模型 `high_aes_general_v50`），支持文生图、图生图和多图生成
+- ✨ **新增 jimeng-5.0-preview 模型**：即梦 AI 最新 5.0 预览版图像生成模型（内部模型 `high_aes_general_v50`），v0.8.6 已更名为 `jimeng-5.0`
 - ✨ **新增 jimeng-4.6 模型**：即梦 AI 4.6 版图像生成模型（内部模型 `high_aes_general_v42`），支持文生图、图生图和多图生成
 - ⚡ **升级 Draft 版本**：jimeng-5.0-preview 和 jimeng-4.6 使用最新 `3.3.9` 版本
 - 🔧 **扩展多图生成支持**：多图检测正则匹配扩展至 jimeng-5.x 系列模型

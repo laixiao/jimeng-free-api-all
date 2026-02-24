@@ -39,7 +39,7 @@ export interface ModelConfig {
 
 // 模型配置映射
 export const MODEL_CONFIGS: Record<string, ModelConfig> = {
-  "jimeng-5.0-preview": {
+  "jimeng-5.0": {
     internalModel: "high_aes_general_v50",
     draftVersion: "3.3.9",
     features: {

@@ -6,10 +6,10 @@
 
 即梦 AI 免费 API 服务 - 逆向工程的 API 服务器，提供 OpenAI 兼容接口，封装即梦 AI 的图像和视频生成能力。
 
-**版本：** v0.8.5
+**版本：** v0.8.6
 
 **核心功能：**
-- 文生图：支持 jimeng-5.0-preview、jimeng-4.6、jimeng-4.5 等多款模型，最高 4K 分辨率
+- 文生图：支持 jimeng-5.0、jimeng-4.6、jimeng-4.5 等多款模型，最高 4K 分辨率
 - 图生图：多图合成，支持 1-10 张输入图片
 - 视频生成：jimeng-video-3.5-pro 等模型，支持首帧/尾帧控制
 - Seedance 2.0：多模态智能视频生成，模型名 `jimeng-video-seedance-2.0`（兼容 `seedance-2.0`），支持图片/视频/音频混合上传，@1、@2 占位符引用素材，4-15 秒时长
@@ -124,7 +124,7 @@ src/
 #### 图像模型
 | 用户模型名 | 内部模型名 | Draft 版本 | 说明 |
 |-----------|-----------|-----------|------|
-| `jimeng-5.0-preview` | `high_aes_general_v50` | 3.3.9 | 5.0 预览版，最新模型 |
+| `jimeng-5.0` | `high_aes_general_v50` | 3.3.9 | 5.0 正式版（原 jimeng-5.0-preview），最新模型 |
 | `jimeng-4.6` | `high_aes_general_v42` | 3.3.9 | 推荐使用 |
 | `jimeng-4.5` | `high_aes_general_v40l` | 3.3.4 | 高质量模型 |
 | `jimeng-4.1` | `high_aes_general_v41` | 3.3.4 | 高质量模型 |
@@ -259,7 +259,7 @@ src/
 curl -X POST http://localhost:8000/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_sessionid" \
-  -d '{"model": "jimeng-5.0-preview", "prompt": "美丽的日落风景", "ratio": "16:9", "resolution": "2k"}'
+  -d '{"model": "jimeng-5.0", "prompt": "美丽的日落风景", "ratio": "16:9", "resolution": "2k"}'
 
 # 图生图（通过 images 参数）
 curl -X POST http://localhost:8000/v1/images/generations \
