@@ -5,7 +5,11 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { pathToFileURL } from "url";
+import os from "os";
+import path from "path";
+import http from "http";
+import fs from "fs-extra";
+import mime from "mime";
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
@@ -250,6 +254,9 @@ const RESOURCES = [
 
 class JimengMCPServer {
   private server: Server;
+  private staticFileServer: http.Server | null = null;
+  private staticFilePort: number | null = null;
+  private readonly tempAssetRoot = path.join(os.tmpdir(), "jimeng-free-api-mcp");
 
   constructor() {
     initSessionIds();
@@ -292,8 +299,100 @@ class JimengMCPServer {
     });
   }
 
+  private async ensureStaticFileServer() {
+    if (this.staticFileServer && this.staticFilePort) return;
+
+    await fs.ensureDir(this.tempAssetRoot);
+    this.staticFileServer = http.createServer((req, res) => {
+      void (async () => {
+        const requestUrl = new URL(req.url || "/", "http://127.0.0.1");
+        if (!requestUrl.pathname.startsWith("/assets/")) {
+          res.statusCode = 404;
+          res.end("Not Found");
+          return;
+        }
+
+        const rawRelativePath = decodeURIComponent(requestUrl.pathname.slice("/assets/".length));
+        const root = path.resolve(this.tempAssetRoot);
+        const filePath = path.resolve(root, rawRelativePath);
+        const relative = path.relative(root, filePath);
+        if (relative.startsWith("..") || path.isAbsolute(relative)) {
+          res.statusCode = 400;
+          res.end("Invalid path");
+          return;
+        }
+
+        const exists = await fs.pathExists(filePath);
+        if (!exists) {
+          res.statusCode = 404;
+          res.end("Not Found");
+          return;
+        }
+
+        const stat = await fs.stat(filePath);
+        const contentType = mime.getType(filePath) || "application/octet-stream";
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Accept-Ranges", "bytes");
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+
+        const range = req.headers.range;
+        if (range && /^bytes=\d*-\d*$/.test(range)) {
+          const [startText, endText] = range.replace("bytes=", "").split("-");
+          const start = startText ? parseInt(startText, 10) : 0;
+          const end = endText ? parseInt(endText, 10) : stat.size - 1;
+          if (start >= stat.size || end >= stat.size || start > end) {
+            res.statusCode = 416;
+            res.setHeader("Content-Range", `bytes */${stat.size}`);
+            res.end();
+            return;
+          }
+          res.statusCode = 206;
+          res.setHeader("Content-Range", `bytes ${start}-${end}/${stat.size}`);
+          res.setHeader("Content-Length", String(end - start + 1));
+          fs.createReadStream(filePath, { start, end }).pipe(res);
+          return;
+        }
+
+        res.statusCode = 200;
+        res.setHeader("Content-Length", String(stat.size));
+        fs.createReadStream(filePath).pipe(res);
+      })().catch((err) => {
+        logger.error("MCP static file server error:", err);
+        if (!res.headersSent) res.statusCode = 500;
+        res.end("Internal Server Error");
+      });
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      this.staticFileServer!.once("error", reject);
+      this.staticFileServer!.listen(0, "127.0.0.1", () => {
+        const address = this.staticFileServer!.address();
+        if (!address || typeof address === "string") {
+          reject(new Error("Failed to resolve static file server port"));
+          return;
+        }
+        this.staticFilePort = address.port;
+        logger.info(`MCP static file server started at http://127.0.0.1:${this.staticFilePort}`);
+        resolve();
+      });
+    });
+  }
+
+  private toLocalHttpUrl(localPath: string) {
+    if (!this.staticFilePort) throw new Error("MCP static file server is not ready");
+    const root = path.resolve(this.tempAssetRoot);
+    const filePath = path.resolve(localPath);
+    const relative = path.relative(root, filePath);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) {
+      throw new Error("Asset path is outside MCP temp directory");
+    }
+    const encodedPath = relative.split(path.sep).map(encodeURIComponent).join("/");
+    return `http://127.0.0.1:${this.staticFilePort}/assets/${encodedPath}`;
+  }
+
   private async handleToolCall(toolName: string, args: any) {
     try {
+      await this.ensureStaticFileServer();
       switch (toolName) {
         case "generate_image": {
           const result = await generateImages(
@@ -308,8 +407,10 @@ class JimengMCPServer {
             },
             getSessionId()
           );
-          const localFiles = await saveRemoteAssetsToLocalPaths(result, "images");
-          const localUrls = localFiles.map((f) => pathToFileURL(f.outputPath).toString());
+          const localFiles = await saveRemoteAssetsToLocalPaths(result, "images", {
+            rootDir: this.tempAssetRoot,
+          });
+          const localUrls = localFiles.map((f) => this.toLocalHttpUrl(f.outputPath));
           return {
             content: [
               {
@@ -338,8 +439,10 @@ class JimengMCPServer {
             },
             getSessionId()
           );
-          const localFiles = await saveRemoteAssetsToLocalPaths(result, "images");
-          const localUrls = localFiles.map((f) => pathToFileURL(f.outputPath).toString());
+          const localFiles = await saveRemoteAssetsToLocalPaths(result, "images", {
+            rootDir: this.tempAssetRoot,
+          });
+          const localUrls = localFiles.map((f) => this.toLocalHttpUrl(f.outputPath));
           return {
             content: [
               {
@@ -365,13 +468,15 @@ class JimengMCPServer {
             },
             getSessionId()
           );
-          const localFile = await saveRemoteAssetToLocalPath(result, "videos");
+          const localFile = await saveRemoteAssetToLocalPath(result, "videos", {
+            rootDir: this.tempAssetRoot,
+          });
           return {
             content: [
               {
                 type: "text",
                 text: JSON.stringify({
-                  url: pathToFileURL(localFile.outputPath).toString(),
+                  url: this.toLocalHttpUrl(localFile.outputPath),
                   local_path: localFile.outputPath,
                 }, null, 2),
               },
@@ -390,13 +495,15 @@ class JimengMCPServer {
             },
             getSessionId()
           );
-          const localFile = await saveRemoteAssetToLocalPath(result, "videos");
+          const localFile = await saveRemoteAssetToLocalPath(result, "videos", {
+            rootDir: this.tempAssetRoot,
+          });
           return {
             content: [
               {
                 type: "text",
                 text: JSON.stringify({
-                  url: pathToFileURL(localFile.outputPath).toString(),
+                  url: this.toLocalHttpUrl(localFile.outputPath),
                   local_path: localFile.outputPath,
                 }, null, 2),
               },
@@ -495,6 +602,7 @@ class JimengMCPServer {
   }
 
   async run() {
+    await this.ensureStaticFileServer();
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     logger.info("MCP Server started (stdio mode)");

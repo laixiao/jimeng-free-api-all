@@ -47,7 +47,10 @@ export async function saveRemoteAssetToLocalUrl(
 
 export async function saveRemoteAssetToLocalPath(
   remoteUrl: string,
-  assetType: "images" | "videos" = "images"
+  assetType: "images" | "videos" = "images",
+  options?: {
+    rootDir?: string;
+  }
 ) {
   const response = await axios.get(remoteUrl, {
     responseType: "arraybuffer",
@@ -61,7 +64,8 @@ export async function saveRemoteAssetToLocalPath(
   );
   const dateDir = util.getDateString("yyyyMMdd");
   const relativePath = path.posix.join("generated", assetType, dateDir, `${util.uuid(false)}.${ext}`);
-  const outputPath = path.join(config.system.publicDirPath, ...relativePath.split("/"));
+  const rootDir = options?.rootDir || config.system.publicDirPath;
+  const outputPath = path.join(rootDir, ...relativePath.split("/"));
 
   await fs.ensureDir(path.dirname(outputPath));
   await fs.writeFile(outputPath, response.data);
@@ -79,7 +83,10 @@ export async function saveRemoteAssetsToLocalUrls(
 
 export async function saveRemoteAssetsToLocalPaths(
   remoteUrls: string[],
-  assetType: "images" | "videos" = "images"
+  assetType: "images" | "videos" = "images",
+  options?: {
+    rootDir?: string;
+  }
 ) {
-  return Promise.all(remoteUrls.map((url) => saveRemoteAssetToLocalPath(url, assetType)));
+  return Promise.all(remoteUrls.map((url) => saveRemoteAssetToLocalPath(url, assetType, options)));
 }
