@@ -9,7 +9,7 @@
     "url": "https://github.com/laixiao/jimeng-free-api-all/issues"
   },
   "homepage": "https://github.com/laixiao/jimeng-free-api-all#readme",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "description": "jimeng Free API Server - MCP compatible",
   "type": "module",
   "main": "dist/index.js",
