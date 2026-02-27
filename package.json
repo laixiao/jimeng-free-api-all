@@ -41,7 +41,7 @@
     "start": "node --enable-source-maps --no-node-snapshot dist/index.js",
     "build": "tsup src/index.ts src/mcp/index.ts --format cjs,esm --sourcemap --dts --clean --publicDir public",
     "build:mcp": "tsup src/mcp/index.ts --format cjs,esm --sourcemap --dts --clean",
-    "release": "npm version patch && npm publish --access public"
+    "release": "npm run build && npm version patch && npm publish --access public"
   },
   "author": "Vinlic",
   "license": "ISC",

@@ -1,5 +1,4 @@
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 import fs from 'fs-extra';
 import minimist from 'minimist';
@@ -44,12 +43,13 @@ function loadPackageJson() {
         return JSON.parse(fs.readFileSync(cwdPkgPath).toString());
     }
 
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
+    const entryFile = process.argv[1];
+    const entryDir = entryFile ? path.dirname(entryFile) : process.cwd();
 
     const candidates = [
-        path.resolve(__dirname, '../../package.json'),
-        path.resolve(__dirname, '../package.json')
+        path.resolve(entryDir, '../package.json'),
+        path.resolve(entryDir, '../../package.json'),
+        path.resolve(entryDir, '../../../package.json')
     ];
 
     for (const p of candidates) {
