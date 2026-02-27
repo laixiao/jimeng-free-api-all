@@ -1,4 +1,5 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import fs from 'fs-extra';
 import minimist from 'minimist';
@@ -37,8 +38,31 @@ class Environment {
 
 }
 
+function loadPackageJson() {
+    const cwdPkgPath = path.join(process.cwd(), 'package.json');
+    if (fs.pathExistsSync(cwdPkgPath)) {
+        return JSON.parse(fs.readFileSync(cwdPkgPath).toString());
+    }
+
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
+    const candidates = [
+        path.resolve(__dirname, '../../package.json'),
+        path.resolve(__dirname, '../package.json')
+    ];
+
+    for (const p of candidates) {
+        if (fs.pathExistsSync(p)) {
+            return JSON.parse(fs.readFileSync(p).toString());
+        }
+    }
+
+    return {};
+}
+
 export default new Environment({
     cmdArgs,
     envVars,
-    package: JSON.parse(fs.readFileSync(path.join(path.resolve(), "package.json")).toString())
+    package: loadPackageJson()
 });
