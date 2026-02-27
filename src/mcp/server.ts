@@ -5,6 +5,7 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { pathToFileURL } from "url";
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
@@ -16,6 +17,7 @@ import { generateImages, generateImageComposition, DEFAULT_MODEL as IMAGE_DEFAUL
 import { generateVideo, generateSeedanceVideo, DEFAULT_MODEL as VIDEO_DEFAULT_MODEL } from "../api/controllers/videos.ts";
 import { getCredit, checkResult } from "../api/controllers/core.ts";
 import { getModelConfig, MODEL_CONFIGS } from "../lib/configs/model-config.ts";
+import { saveRemoteAssetToLocalPath, saveRemoteAssetsToLocalPaths } from "../lib/local-assets.ts";
 import logger from "../lib/logger.ts";
 
 // Token from environment
@@ -78,6 +80,11 @@ const TOOLS = [
           type: "number",
           description: "Sampling strength (refinement). Range: 0.0-1.0. Default: 0.5",
           default: 0.5,
+        },
+        n: {
+          type: "number",
+          description: "Number of images to generate (1-10). Default: 1",
+          default: 1,
         },
       },
       required: ["prompt"],
@@ -297,14 +304,20 @@ class JimengMCPServer {
               resolution: args.resolution || "2k",
               sampleStrength: args.sample_strength ?? 0.5,
               negativePrompt: args.negative_prompt || "",
+              n: args.n ?? 1,
             },
             getSessionId()
           );
+          const localFiles = await saveRemoteAssetsToLocalPaths(result, "images");
+          const localUrls = localFiles.map((f) => pathToFileURL(f.outputPath).toString());
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(result, null, 2),
+                text: JSON.stringify({
+                  urls: localUrls,
+                  local_paths: localFiles.map((f) => f.outputPath),
+                }, null, 2),
               },
             ],
           };
@@ -325,11 +338,16 @@ class JimengMCPServer {
             },
             getSessionId()
           );
+          const localFiles = await saveRemoteAssetsToLocalPaths(result, "images");
+          const localUrls = localFiles.map((f) => pathToFileURL(f.outputPath).toString());
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(result, null, 2),
+                text: JSON.stringify({
+                  urls: localUrls,
+                  local_paths: localFiles.map((f) => f.outputPath),
+                }, null, 2),
               },
             ],
           };
@@ -347,11 +365,15 @@ class JimengMCPServer {
             },
             getSessionId()
           );
+          const localFile = await saveRemoteAssetToLocalPath(result, "videos");
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(result, null, 2),
+                text: JSON.stringify({
+                  url: pathToFileURL(localFile.outputPath).toString(),
+                  local_path: localFile.outputPath,
+                }, null, 2),
               },
             ],
           };
@@ -368,11 +390,15 @@ class JimengMCPServer {
             },
             getSessionId()
           );
+          const localFile = await saveRemoteAssetToLocalPath(result, "videos");
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(result, null, 2),
+                text: JSON.stringify({
+                  url: pathToFileURL(localFile.outputPath).toString(),
+                  local_path: localFile.outputPath,
+                }, null, 2),
               },
             ],
           };

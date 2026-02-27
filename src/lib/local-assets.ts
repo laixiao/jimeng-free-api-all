@@ -36,6 +36,19 @@ export async function saveRemoteAssetToLocalUrl(
   assetType: "images" | "videos" = "images",
   publicBaseUrl?: string | null
 ) {
+  const { relativePath } = await saveRemoteAssetToLocalPath(remoteUrl, assetType);
+
+  const baseUrl = publicBaseUrl || `${config.service.publicDirUrl.replace(/\/public$/, "")}${normalizePrefix(config.service.urlPrefix)}`;
+  const localUrl = `${baseUrl}/public/${relativePath}`;
+
+  logger.info(`asset localized: ${remoteUrl} -> ${localUrl}`);
+  return localUrl;
+}
+
+export async function saveRemoteAssetToLocalPath(
+  remoteUrl: string,
+  assetType: "images" | "videos" = "images"
+) {
   const response = await axios.get(remoteUrl, {
     responseType: "arraybuffer",
     timeout: 120000,
@@ -53,11 +66,7 @@ export async function saveRemoteAssetToLocalUrl(
   await fs.ensureDir(path.dirname(outputPath));
   await fs.writeFile(outputPath, response.data);
 
-  const baseUrl = publicBaseUrl || `${config.service.publicDirUrl.replace(/\/public$/, "")}${normalizePrefix(config.service.urlPrefix)}`;
-  const localUrl = `${baseUrl}/public/${relativePath}`;
-
-  logger.info(`asset localized: ${remoteUrl} -> ${localUrl}`);
-  return localUrl;
+  return { outputPath, relativePath };
 }
 
 export async function saveRemoteAssetsToLocalUrls(
@@ -66,4 +75,11 @@ export async function saveRemoteAssetsToLocalUrls(
   publicBaseUrl?: string | null
 ) {
   return Promise.all(remoteUrls.map((url) => saveRemoteAssetToLocalUrl(url, assetType, publicBaseUrl)));
+}
+
+export async function saveRemoteAssetsToLocalPaths(
+  remoteUrls: string[],
+  assetType: "images" | "videos" = "images"
+) {
+  return Promise.all(remoteUrls.map((url) => saveRemoteAssetToLocalPath(url, assetType)));
 }

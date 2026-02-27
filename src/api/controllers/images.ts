@@ -654,7 +654,7 @@ export async function generateImageComposition(
         submit_id: submitId,
         metrics_extra: JSON.stringify({
           promptSource: "custom",
-          generateCount: finalTargetImageCount,
+          generateCount: 1,
           enterFrom: "click",
           sceneOptions: JSON.stringify([sceneOption]),
           generateId: submitId,
