@@ -654,7 +654,7 @@ export async function generateImageComposition(
         submit_id: submitId,
         metrics_extra: JSON.stringify({
           promptSource: "custom",
-          generateCount: 1,
+          generateCount: finalTargetImageCount,
           enterFrom: "click",
           sceneOptions: JSON.stringify([sceneOption]),
           generateId: submitId,
@@ -756,6 +756,7 @@ export async function generateImageComposition(
     
   let status = 20, failCode, item_list = [];
   let pollCount = 0;
+  let missingRecordCount = 0;
   const maxPollCount = 600; // 最多轮询10分钟
 
   while (pollCount < maxPollCount) {
@@ -845,8 +846,15 @@ export async function generateImageComposition(
       },
     });
 
-    if (!result[historyId])
-      throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
+    if (!result[historyId]) {
+      missingRecordCount++;
+      logger.warn(`history_id ${historyId} not found in poll result, retry ${missingRecordCount}/10`);
+      if (missingRecordCount >= 10) {
+        throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
+      }
+      continue;
+    }
+    missingRecordCount = 0;
 
     status = result[historyId].status;
     failCode = result[historyId].fail_code;
@@ -900,12 +908,14 @@ async function generateMultiImages(
     sampleStrength = 0.5,
     negativePrompt = "",
     intelligentRatio = false,
+    targetImageCount,
   }: {
     ratio?: string;
     resolution?: string;
     sampleStrength?: number;
     negativePrompt?: string;
     intelligentRatio?: boolean;
+    targetImageCount?: number;
   },
   refreshToken: string
 ) {
@@ -915,10 +925,14 @@ async function generateMultiImages(
   const resolutionResult = resolveResolution(resolution, ratio);
   const { width, height, imageRatio, resolutionType } = resolutionResult;
 
-  // 从prompt中提取图片数量，默认为4张
-  const targetImageCount = prompt.match(/(\d+)张/) ? parseInt(prompt.match(/(\d+)张/)[1]) : 4;
+  // 优先使用外部传入数量，否则从 prompt 提取，默认 4 张
+  const finalTargetImageCount = _.clamp(
+    targetImageCount ?? (prompt.match(/(\d+)张/) ? parseInt(prompt.match(/(\d+)张/)[1]) : 4),
+    1,
+    10
+  );
 
-  logger.info(`使用 ${_model} 多图生成: ${targetImageCount}张图片 ${width}x${height} (${ratio}@${resolution}) 精细度: ${sampleStrength}`);
+  logger.info(`使用 ${_model} 多图生成: ${finalTargetImageCount}张图片 ${width}x${height} (${ratio}@${resolution}) 精细度: ${sampleStrength}`);
 
   const componentId = util.uuid();
   const submitId = util.uuid();
@@ -1011,7 +1025,7 @@ async function generateMultiImages(
                   gen_option: {
                     type: "",
                     id: util.uuid(),
-                    generate_all: false,
+                    generate_all: finalTargetImageCount > 1,
                   },
                 },
               },
@@ -1029,11 +1043,12 @@ async function generateMultiImages(
   if (!historyId)
     throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录ID不存在");
 
-  logger.info(`多图生成任务已提交，submit_id: ${submitId}, history_id: ${historyId}，等待生成 ${targetImageCount} 张图片...`);
+  logger.info(`多图生成任务已提交，submit_id: ${submitId}, history_id: ${historyId}，等待生成 ${finalTargetImageCount} 张图片...`);
 
   // 直接使用 history_id 轮询生成结果（增加轮询时间）
   let status = 20, failCode, item_list = [];
   let pollCount = 0;
+  let missingRecordCount = 0;
   const maxPollCount = 600; // 最多轮询10分钟（600次 * 1秒）
 
   while (pollCount < maxPollCount) {
@@ -1041,7 +1056,7 @@ async function generateMultiImages(
     pollCount++;
     
     if (pollCount % 30 === 0) {
-      logger.info(`多图生成进度: 第 ${pollCount} 次轮询 (history_id: ${historyId})，当前状态: ${status}，已生成: ${item_list.length}/${targetImageCount} 张图片...`);
+      logger.info(`多图生成进度: 第 ${pollCount} 次轮询 (history_id: ${historyId})，当前状态: ${status}，已生成: ${item_list.length}/${finalTargetImageCount} 张图片...`);
     }
 
     const result = await request("post", "/mweb/v1/get_history_by_ids", refreshToken, {
@@ -1123,15 +1138,22 @@ async function generateMultiImages(
       },
     });
 
-    if (!result[historyId])
-      throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
+    if (!result[historyId]) {
+      missingRecordCount++;
+      logger.warn(`history_id ${historyId} not found in poll result, retry ${missingRecordCount}/10`);
+      if (missingRecordCount >= 10) {
+        throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
+      }
+      continue;
+    }
+    missingRecordCount = 0;
 
     status = result[historyId].status;
     failCode = result[historyId].fail_code;
     item_list = result[historyId].item_list || [];
 
     // 检查是否已生成足够的图片
-    if (item_list.length >= targetImageCount) {
+    if (item_list.length >= finalTargetImageCount) {
       logger.info(`多图生成完成: 状态=${status}, 已生成 ${item_list.length} 张图片`);
       break;
     }
@@ -1142,8 +1164,8 @@ async function generateMultiImages(
     }
     
     // 如果状态是完成但图片数量不够，记录并继续等待
-    if (status === 10 && item_list.length < targetImageCount && pollCount % 30 === 0) {
-      logger.info(`jimeng-4.0 状态已完成但图片数量不足: 状态=${status}, 已生成 ${item_list.length}/${targetImageCount} 张图片，继续等待...`);
+    if (status === 10 && item_list.length < finalTargetImageCount && pollCount % 30 === 0) {
+      logger.info(`jimeng-4.0 状态已完成但图片数量不足: 状态=${status}, 已生成 ${item_list.length}/${finalTargetImageCount} 张图片，继续等待...`);
     }
   }
 
@@ -1162,7 +1184,7 @@ async function generateMultiImages(
     if(!item?.image?.large_images?.[0]?.image_url)
       return item?.common_attr?.cover_url || null;
     return item.image.large_images[0].image_url;
-  }).filter(url => url !== null);
+  }).filter(url => url !== null).slice(0, finalTargetImageCount);
 
   logger.info(`多图生成结果: 成功生成 ${imageUrls.length} 张图片`);
   return imageUrls;
@@ -1177,12 +1199,14 @@ export async function generateImages(
     sampleStrength = 0.5,
     negativePrompt = "",
     intelligentRatio = false,
+    n = 1,
   }: {
     ratio?: string;
     resolution?: string;
     sampleStrength?: number;
     negativePrompt?: string;
     intelligentRatio?: boolean;
+    n?: number;
   },
   refreshToken: string
 ) {
@@ -1200,7 +1224,9 @@ export async function generateImages(
     await receiveCredit(refreshToken);
 
   // 检测是否为多图生成请求
+  const finalN = _.clamp(Number(n) || 1, 1, 10);
   const isMultiImageRequest = (/jimeng-[45]\.[0-9]/.test(_model)) && (
+    finalN > 1 ||
     prompt.includes("连续") ||
     prompt.includes("绘本") ||
     prompt.includes("故事") ||
@@ -1209,7 +1235,12 @@ export async function generateImages(
 
   // 如果是多图请求，使用专门的处理逻辑
   if (isMultiImageRequest) {
-    return await generateMultiImages(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt, intelligentRatio }, refreshToken);
+    return await generateMultiImages(
+      _model,
+      prompt,
+      { ratio, resolution, sampleStrength, negativePrompt, intelligentRatio, targetImageCount: finalN > 1 ? finalN : undefined },
+      refreshToken
+    );
   }
 
   const componentId = util.uuid();
@@ -1320,6 +1351,7 @@ export async function generateImages(
 
   let status = 20, failCode, item_list = [];
   let pollCount = 0;
+  let missingRecordCount = 0;
   const maxPollCount = 600; // 最多轮询10分钟
 
   while (pollCount < maxPollCount) {
@@ -1429,8 +1461,15 @@ export async function generateImages(
         },
       },
     });
-    if (!result[historyId])
-      throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
+    if (!result[historyId]) {
+      missingRecordCount++;
+      logger.warn(`history_id ${historyId} not found in poll result, retry ${missingRecordCount}/10`);
+      if (missingRecordCount >= 10) {
+        throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
+      }
+      continue;
+    }
+    missingRecordCount = 0;
 
     status = result[historyId].status;
     failCode = result[historyId].fail_code;

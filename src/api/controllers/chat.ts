@@ -5,6 +5,7 @@ import APIException from "@/lib/exceptions/APIException.ts";
 import EX from "@/api/consts/exceptions.ts";
 import logger from "@/lib/logger.ts";
 import util from "@/lib/util.ts";
+import { saveRemoteAssetToLocalUrl, saveRemoteAssetsToLocalUrls } from "@/lib/local-assets.ts";
 import { generateImages, DEFAULT_MODEL } from "./images.ts";
 import { generateVideo, generateSeedanceVideo, isSeedanceModel, DEFAULT_MODEL as DEFAULT_VIDEO_MODEL } from "./videos.ts";
 
@@ -51,7 +52,8 @@ export async function createCompletion(
   messages: any[],
   refreshToken: string,
   _model = DEFAULT_MODEL,
-  retryCount = 0
+  retryCount = 0,
+  publicBaseUrl?: string | null
 ) {
   return (async () => {
     if (messages.length === 0)
@@ -101,7 +103,8 @@ export async function createCompletion(
           refreshToken
         );
         
-        logger.info(`视频生成成功，URL: ${videoUrl}`);
+        const localVideoUrl = await saveRemoteAssetToLocalUrl(videoUrl, "videos", publicBaseUrl);
+        logger.info(`视频生成成功，URL: ${localVideoUrl}`);
         return {
           id: util.uuid(),
           model: _model,
@@ -111,7 +114,7 @@ export async function createCompletion(
               index: 0,
               message: {
                 role: "assistant",
-                content: `![video](${videoUrl})\n`,
+                content: `![video](${localVideoUrl})\n`,
               },
               finish_reason: "stop",
             },
@@ -156,6 +159,7 @@ export async function createCompletion(
         },
         refreshToken
       );
+      const localImageUrls = await saveRemoteAssetsToLocalUrls(imageUrls, "images", publicBaseUrl);
 
       return {
         id: util.uuid(),
@@ -166,7 +170,7 @@ export async function createCompletion(
             index: 0,
             message: {
               role: "assistant",
-              content: imageUrls.reduce(
+              content: localImageUrls.reduce(
                 (acc, url, i) => acc + `![image_${i}](${url})\n`,
                 ""
               ),
@@ -184,7 +188,7 @@ export async function createCompletion(
       logger.warn(`Try again after ${RETRY_DELAY / 1000}s...`);
       return (async () => {
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
-        return createCompletion(messages, refreshToken, _model, retryCount + 1);
+        return createCompletion(messages, refreshToken, _model, retryCount + 1, publicBaseUrl);
       })();
     }
     throw err;
@@ -203,7 +207,8 @@ export async function createCompletionStream(
   messages: any[],
   refreshToken: string,
   _model = DEFAULT_MODEL,
-  retryCount = 0
+  retryCount = 0,
+  publicBaseUrl?: string | null
 ) {
   return (async () => {
     const { model, width, height } = parseModel(_model);
@@ -316,11 +321,12 @@ export async function createCompletionStream(
         { ratio: "16:9", resolution: "720p" },
         refreshToken
       )
-        .then((videoUrl) => {
+        .then(async (videoUrl) => {
           clearInterval(progressInterval);
           clearTimeout(timeoutId);
-          
-          logger.info(`视频生成成功，URL: ${videoUrl}`);
+
+          const localVideoUrl = await saveRemoteAssetToLocalUrl(videoUrl, "videos", publicBaseUrl);
+          logger.info(`视频生成成功，URL: ${localVideoUrl}`);
           
           stream.write(
             "data: " +
@@ -333,7 +339,7 @@ export async function createCompletionStream(
                     index: 1,
                     delta: {
                       role: "assistant",
-                      content: `\n\n✅ 视频生成完成！\n\n![video](${videoUrl})\n\n您可以：\n1. 直接查看上方视频\n2. 使用以下链接下载或分享：${videoUrl}`,
+                      content: `\n\n✅ 视频生成完成！\n\n![video](${localVideoUrl})\n\n您可以：\n1. 直接查看上方视频\n2. 使用以下链接下载或分享：${localVideoUrl}`,
                     },
                     finish_reason: null,
                   },
@@ -437,9 +443,10 @@ export async function createCompletionStream(
         { width, height },
         refreshToken
       )
-        .then((imageUrls) => {
-          for (let i = 0; i < imageUrls.length; i++) {
-            const url = imageUrls[i];
+        .then(async (imageUrls) => {
+          const localImageUrls = await saveRemoteAssetsToLocalUrls(imageUrls, "images", publicBaseUrl);
+          for (let i = 0; i < localImageUrls.length; i++) {
+            const url = localImageUrls[i];
             stream.write(
               "data: " +
                 JSON.stringify({
@@ -453,7 +460,7 @@ export async function createCompletionStream(
                         role: "assistant",
                         content: `![image_${i}](${url})\n`,
                       },
-                      finish_reason: i < imageUrls.length - 1 ? null : "stop",
+                      finish_reason: i < localImageUrls.length - 1 ? null : "stop",
                     },
                   ],
                 }) +
@@ -468,7 +475,7 @@ export async function createCompletionStream(
                 object: "chat.completion.chunk",
                 choices: [
                   {
-                    index: imageUrls.length + 1,
+                    index: localImageUrls.length + 1,
                     delta: {
                       role: "assistant",
                       content: "图像生成完成！",
@@ -515,7 +522,8 @@ export async function createCompletionStream(
           messages,
           refreshToken,
           _model,
-          retryCount + 1
+          retryCount + 1,
+          publicBaseUrl
         );
       })();
     }

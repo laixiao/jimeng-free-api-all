@@ -4,6 +4,7 @@ import Request from '@/lib/request/Request.ts';
 import Response from '@/lib/response/Response.ts';
 import { tokenSplit } from '@/api/controllers/core.ts';
 import { createCompletion, createCompletionStream } from '@/api/controllers/chat.ts';
+import { buildPublicBaseUrl } from "@/lib/local-assets.ts";
 
 export default {
 
@@ -21,14 +22,15 @@ export default {
             // 随机挑选一个refresh_token
             const token = _.sample(tokens);
             const { model, messages, stream } = request.body;
+            const publicBaseUrl = buildPublicBaseUrl(request.headers);
             if (stream) {
-                const stream = await createCompletionStream(messages, token, model);
+                const stream = await createCompletionStream(messages, token, model, 0, publicBaseUrl);
                 return new Response(stream, {
                     type: "text/event-stream"
                 });
             }
             else
-                return await createCompletion(messages, token, model);
+                return await createCompletion(messages, token, model, 0, publicBaseUrl);
         }
 
     }

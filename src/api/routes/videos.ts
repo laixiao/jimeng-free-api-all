@@ -5,6 +5,7 @@ import Response from '@/lib/response/Response.ts';
 import { tokenSplit } from '@/api/controllers/core.ts';
 import { generateVideo, generateSeedanceVideo, isSeedanceModel, DEFAULT_MODEL } from '@/api/controllers/videos.ts';
 import util from '@/lib/util.ts';
+import { buildPublicBaseUrl, saveRemoteAssetToLocalUrl } from "@/lib/local-assets.ts";
 
 export default {
 
@@ -120,10 +121,12 @@ export default {
                 };
             } else {
                 // 默认返回URL
+                const publicBaseUrl = buildPublicBaseUrl(request.headers);
+                const localVideoUrl = await saveRemoteAssetToLocalUrl(videoUrl, "videos", publicBaseUrl);
                 return {
                     created: util.unixTimestamp(),
                     data: [{
-                        url: videoUrl,
+                        url: localVideoUrl,
                         revised_prompt: prompt
                     }]
                 };

@@ -5,6 +5,7 @@ import Request from "@/lib/request/Request.ts";
 import { generateImages, generateImageComposition } from "@/api/controllers/images.ts";
 import { tokenSplit } from "@/api/controllers/core.ts";
 import util from "@/lib/util.ts";
+import { buildPublicBaseUrl, saveRemoteAssetsToLocalUrls } from "@/lib/local-assets.ts";
 
 export default {
   prefix: "/v1/images",
@@ -33,6 +34,7 @@ export default {
           .validate("body.resolution", v => _.isUndefined(v) || _.isString(v))
           .validate("body.intelligent_ratio", v => _.isUndefined(v) || (typeof v === 'string' && (v === 'true' || v === 'false')) || _.isBoolean(v))
           .validate("body.sample_strength", v => _.isUndefined(v) || (typeof v === 'string' && !isNaN(parseFloat(v))) || _.isFinite(v))
+          .validate("body.n", v => _.isUndefined(v) || (typeof v === 'string' && /^\d+$/.test(v)) || (_.isFinite(v) && v >= 1 && v <= 10))
           .validate("body.response_format", v => _.isUndefined(v) || _.isString(v))
           .validate("headers.authorization", _.isString);
       } else {
@@ -45,6 +47,7 @@ export default {
           .validate("body.resolution", v => _.isUndefined(v) || _.isString(v))
           .validate("body.intelligent_ratio", v => _.isUndefined(v) || _.isBoolean(v))
           .validate("body.sample_strength", v => _.isUndefined(v) || _.isFinite(v))
+          .validate("body.n", v => _.isUndefined(v) || (_.isFinite(v) && v >= 1 && v <= 10))
           .validate("body.response_format", v => _.isUndefined(v) || _.isString(v))
           .validate("headers.authorization", _.isString);
       }
@@ -93,6 +96,7 @@ export default {
         resolution,
         intelligent_ratio: intelligentRatio,
         sample_strength: sampleStrength,
+        n,
         response_format,
       } = request.body;
 
@@ -104,8 +108,10 @@ export default {
       const finalIntelligentRatio = isMultiPart && typeof intelligentRatio === 'string'
         ? intelligentRatio === 'true'
         : intelligentRatio;
+      const finalN = isMultiPart && typeof n === 'string' ? parseInt(n) : n;
 
       const responseFormat = _.defaultTo(response_format, "url");
+      const publicBaseUrl = buildPublicBaseUrl(request.headers);
 
       // 根据是否有图片数据决定调用文生图还是图生图
       let imageUrls: string[];
@@ -132,6 +138,7 @@ export default {
           sampleStrength: finalSampleStrength,
           negativePrompt,
           intelligentRatio: finalIntelligentRatio,
+          n: finalN,
         }, token);
       }
 
@@ -141,7 +148,8 @@ export default {
           await Promise.all(imageUrls.map((url) => util.fetchFileBASE64(url)))
         ).map((b64) => ({ b64_json: b64 }));
       } else {
-        data = imageUrls.map((url) => ({
+        const localUrls = await saveRemoteAssetsToLocalUrls(imageUrls, "images", publicBaseUrl);
+        data = localUrls.map((url) => ({
           url,
         }));
       }
@@ -248,6 +256,7 @@ export default {
         : intelligentRatio;
 
       const responseFormat = _.defaultTo(response_format, "url");
+      const publicBaseUrl = buildPublicBaseUrl(request.headers);
       const resultUrls = await generateImageComposition(model, prompt, images, {
         ratio,
         resolution,
@@ -262,7 +271,8 @@ export default {
           await Promise.all(resultUrls.map((url) => util.fetchFileBASE64(url)))
         ).map((b64) => ({ b64_json: b64 }));
       } else {
-        data = resultUrls.map((url) => ({
+        const localUrls = await saveRemoteAssetsToLocalUrls(resultUrls, "images", publicBaseUrl);
+        data = localUrls.map((url) => ({
           url,
         }));
       }
